@@ -1,0 +1,22 @@
+Practical Common Lip (book)
+
+http://www.gigamonkeys.com/book/
+
+
+
+
+Write Yourself a Scheme in 48 Hours (book, teaches how to write a Scheme using Haskel (book)
+
+http://en.wikibooks.org/wiki/Write_Yourself_a_Scheme_in_48_Hours
+
+
+
+Write a Scheme interepeter using Python (article)
+
+http://norvig.com/lispy.html
+
+
+
+Paradigms of Artificial Intelligence Programming Case Studies in Common Lisp (book)
+
+http://www.amazon.com/Paradigms-Artificial-Intelligence-Programming-Studies/dp/1558601910

@@ -1,0 +1,226 @@
+
+
+Juke - A Common Lisp dialect
+
+To install Juke
+
+(load "base.lisp")
+(requires "juke-compiler")  ;; or juke but juke-compiler requires juke so you could just require juke-compiler 
+
+Documentation
+
+This is a work in progress and it will be updated when the new version comes out. For now, this documentation covers the basic functions, the souce code contains helpful comments too.
+
+Set variable = $var
+Get variable = $$var
+
+boundp symbol => generateeralized-boolean
+
+(setq x 1) =>  1
+ (boundp 'x) =>  true
+ (makunbound 'x) =>  X
+ (boundp 'x) =>  false
+ (let ((x 2)) (boundp 'x)) =>  false
+ (let ((x 2)) (declare (special x)) (boundp 'x)) =>  true
+
+mapc function &rest lists+ => list-1
+
+The mapping operation involves applying function to successive sets of arguments in which one argument is obtained from each sequence. Except for mapc and mapl, the result contains the results returned by function. In the cases of mapc and mapl, the resulting sequence is list.
+
+mapc is like mapcar except that the results of applying function are not accumulated. The list argument is returned.
+
+mappend
+
+maps elements in list and finally appends all resulted lists.
+
+(defun mappend (foo &rest lsts)
+  "maps elements in list and finally appends all resulted lists."
+  (apply #'append (apply #'mapcar foo lsts)))
+
+----------------------------------------------------
+
+11.1 Association Lists
+
+An association list, or alist, is a data structure used very frequently in . An alist is a list of pairs, each of which is called an association. The car of an association is called the key.
+
+An advantage of the alist representation is that an alist can be incrementally augmented simply by adding new entries to the front. Moreover, because the searching procedures assv et al. search the alist in order, new entries can “shadow” old entries. If an alist is viewed as a mapping from keys to data, then the mapping can be not only augmented but also altered in a non-destructive manner by adding new entries to the front of the alist.1
+
+— procedure: alist? object
+Returns #t if object is an association list (including the empty list); otherwise returns #f. Any object satisfying this predicate also satisfies list?.
+
+— procedure: assq object alist
+— procedure: assv object alist
+— procedure: assoc object alist
+These procedures find the first pair in alist whose car field is object, and return that pair; the returned pair is always an element of alist, not one of the pairs from which alist is compileosed. If no pair in alist has object as its car, #f (n.b.: not the empty list) is returned. assq uses eq? to compileare object with the car fields of the pairs in alist, while assv uses eqv? and assoc uses equal?.2
+
+          (define e '((a 1) (b 2) (c 3)))
+          (assq 'a e)                             ?  (a 1)
+          (assq 'b e)                             ?  (b 2)
+          (assq 'd e)                             ?  #f
+          (assq (list 'a) '(((a)) ((b)) ((c))))   ?  #f
+          (assoc (list 'a) '(((a)) ((b)) ((c))))  ?  ((a))
+          (assq 5 '((2 3) (5 7) (11 13)))         ?  unspecified
+          (assv 5 '((2 3) (5 7) (11 13)))         ?  (5 7)
+
+		  — procedure: association-procedure predicate selector
+Returns an association procedure that is similar to assv, except that selector (a procedure of one argument) is used to select the key from the association, and predicate (an equivalence predicate) is used to compileare the key to the given item. This can be used to make association lists whose elements are, say, vectors instead of pairs (also see Searching Lists).
+
+For example, here is how assv could be implemented:
+
+          (define assv (association-procedure eqv? car))
+Another example is a “reverse association” procedure:
+
+          (define rassv (association-procedure eqv? cdr))
+— procedure: del-assq object alist
+— procedure: del-assv object alist
+— procedure: del-assoc object alist
+These procedures return a newly allocated copy of alist in which all associations with keys equal to object have been removed. Note that while the returned copy is a newly allocated list, the association pairs that are the elements of the list are shared with alist, not copied. del-assq uses eq? to compileare object with the keys, while del-assv uses eqv? and del-assoc uses equal?.
+
+          (define a
+            '((butcher . "231 e22nd St.")
+              (baker . "515 w23rd St.")
+              (hardware . "988 Lexington Ave.")))
+          
+          (del-assq 'baker a)
+               ?
+               ((butcher . "231 e22nd St.")
+                (hardware . "988 Lexington Ave."))
+— procedure: del-assq! object alist
+— procedure: del-assv! object alist
+— procedure: del-assoc! object alist
+These procedures remove from alist all associations with keys equal to object. They return the resulting list. del-assq! uses eq? to compileare object with the keys, while del-assv! uses eqv? and del-assoc! uses equal?. These procedures are like del-assq, del-assv, and del-assoc, respectively, except that they destructively modify alist.
+
+— procedure: delete-association-procedure deletor predicate selector
+This returns a deletion procedure similar to del-assv or del-assq!. The predicate and selector arguments are the same as those for association-procedure, while the deletor argument should be either the procedure list-deletor (for non-destructive deletions), or the procedure list-deletor! (for destructive deletions).
+
+For example, here is a possible implementation of del-assv:
+
+          (define del-assv
+            (delete-association-procedure list-deletor eqv? car))
+— procedure: alist-copy alist
+Returns a newly allocated copy of alist. This is similar to list-copy except that the “association” pairs, i.e. the elements of the list alist, are also copied. alist-copy could have been implemented like this:
+
+          (define (alist-copy alist)
+            (if (null? alist)
+                '()
+                (cons (cons (car (car alist)) (cdr (car alist)))
+                      (alist-copy (cdr alist)))))
+
+
+
+
+
+
+
+                      mapcar function &rest lists+ => result-list
+
+                      mapcar operates on successive elements of the lists. function is applied to the first element of each list, then to the second element of each list, and so on. The iteration terminates when the shortest list runs out, and excess elements in other lists are ignored. The value returned by mapcar is a list of the results of successive calls to function.
+
+
+                      (mapcar #'car '((1 a) (2 b) (3 c))) =>  (1 2 3) 
+ (mapcar #'abs '(3 -4 2 -5 -6)) =>  (3 4 2 5 6)
+ (mapcar #'cons '(a b c) '(1 2 3)) =>  ((A . 1) (B . 2) (C . 3))
+
+
+
+
+ case
+If no normal-clause matches, and there is an otherwise-clause, then that otherwise-clause automatically matches; the forms in that clause are evaluated as an implicit progn, and the values it returns are returned as the value of the case.
+If there is no otherwise-clause, case returns nil.
+
+
+ncond
+Returns a list that is the concatenation of lists. If no lists are supplied, (nconc) returns nil. nconc is defined using the following recursive relationship:
+
+ (nconc) =>  ()
+ (nconc nil . lists) ==  (nconc . lists)
+ (nconc list) =>  list
+ (nconc list-1 list-2) ==  (progn (rplacd (last list-1) list-2) list-1)
+ (nconc list-1 list-2 . lists) ==  (nconc (nconc list-1 list-2) . lists)
+Examples:
+
+ (nconc) =>  NIL
+ (setq x '(a b c)) =>  (A B C)
+ (setq y '(d e f)) =>  (D E F)
+ (nconc x y) =>  (A B C D E F)
+ x =>  (A B C D E F)
+
+
+ PROGN calls its expression in the order they have been written. Resulting value is the value of the last form unless non-local control flow forced earlier return. See also PROG1, PROG2.
+
+Note that many macros and special forms behave partially as PROGN. It is called "implicit progn".
+
+(progn 1 2 3 4 5) => 5
+(progn 1 2 (sin 2.0) 4 (sin 1.0)) => 0.84147096
+(progn) => NIL ------------ its called BEGIN in Scheme
+
+---------------------------------------
+29.1 Creating Frames
+
+To create a new frame, call the function make-frame.
+
+— Command: make-frame &optional alist
+This function creates and returns a new frame, displaying the current buffer.
+
+The alist argument is an alist that specifies frame parameters for the new frame. See Frame Parameters. If you specify the terminal parameter in alist, the new frame is created on that terminal. Otherwise, if you specify the window-system frame parameter in alist, that determines whether the frame should be displayed on a text terminal or a graphical terminal. See Window Systems. If neither is specified, the new frame is created in the same terminal as the selected frame.
+
+Any parameters not mentioned in alist default to the values in the alist default-frame-alist (see Initial Parameters); parameters not specified there default from the X resources or its equivalent on your operating system (see X Resources). After the frame is created, Emacs applies any parameters listed in frame-inherited-parameters (see below) and not present in the argument, taking the values from the frame that was selected when make-frame was called.
+
+This function itself does not make the new frame the selected frame. See Input Focus. The previously selected frame remains selected. On graphical terminals, however, the windowing system may select the new frame for its own reasons.
+
+— Variable: before-make-frame-hook
+A normal hook run by make-frame before it creates the frame.
+
+— Variable: after-make-frame-functions
+An abnormal hook run by make-frame after it creates the frame. Each function in after-make-frame-functions receives one argument, the frame just created.
+
+— Variable: frame-inherited-parameters
+This variable specifies the list of frame parameters that a newly created frame inherits from the currently selected frame. For each parameter (a symbol) that is an element in the list and is not present in the argument to make-frame, the function sets the value of that parameter in the created frame to its value in the selected frame.
+
+
+
+
+
+Function APPLY
+Syntax:
+
+apply function &rest args+ => result*
+
+Arguments and Values:
+
+function---a function designator.
+
+args---a spreadable argument list designator.
+
+results---the values returned by function.
+
+Description:
+
+Applies the function to the args.
+
+When the function receives its arguments via &rest, it is permissible (but not required) for the implementation to bind the rest parameter to an object that shares structure with the last argument to apply. Because a function can neither detect whether it was called via apply nor whether (if so) the last argument to apply was a constant, conforming programs must neither rely on the list structure of a rest list to be freshly consed, nor modify that list structure.
+
+setf can be used with apply in certain circumstances; see Section 5.1.2.5 (APPLY Forms as Places).
+
+Examples:
+
+ (setq f '+) =>  +
+ (apply f '(1 2)) =>  3
+ (setq f #'-) =>  #<FUNCTION ->
+ (apply f '(1 2)) =>  -1
+ (apply #'max 3 5 '(2 7 3)) =>  7
+ (apply 'cons '((+ 2 3) 4)) =>  ((+ 2 3) . 4)
+ (apply #'+ '()) =>  0
+
+ (defparameter *some-list* '(a b c))
+ (defun strange-test (&rest x) (eq x *some-list*))
+ (apply #'strange-test *some-list*) =>  implementation-dependent
+
+ (defun bad-boy (&rest x) (rplacd x 'y))
+ (bad-boy 'a 'b 'c) has undefined consequences.
+ (apply #'bad-boy *some-list*) has undefined consequences.
+ (defun foo (size &rest keys &key double &allow-other-keys)
+   (let ((v (apply #'make-array size :allow-other-keys t keys)))
+     (if double (concatenate (type-of v) v v) v)))
+ (foo 4 :initial-contents '(a b c d) :double t)
+    =>  #(A B C D A B C D)
